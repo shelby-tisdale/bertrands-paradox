@@ -6,16 +6,24 @@ format: html
 
 ```{r}
 #| label: load-packages
+#| message: false
+#| warning: false
+#| output: false
 library(tidyverse)
 library(latex2exp)
 library(ggforce)
 library(gganimate)
 library(extrafont)
-loadfonts()
+library(reshape2)
+library(plotrix)
+library(animate)
+library(graphics)
+library(gifski)
 ```
 
 
 ```{r}
+#| label: case-1
 #| warning: false
 
 #create data frame
@@ -24,31 +32,142 @@ df <- data.frame(x=c(1, 2, 2, 3, 3, 4, 8),
 
 #create scatter plot with circle
 ggplot(data = df, aes(x, y)) +
-  annotate("segment", x = 0, y = 1, xend = -(3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
-  annotate("segment", x = 0, y = 1, xend = (3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
-  annotate("segment", x = -(3^(1/2))/2, y = -0.5, xend = (3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
+  annotate("segment", x = 0, y = 1, xend = -(3^(1/2))/2, yend = -0.5, color = "black", lwd = 1) +
+  annotate("segment", x = 0, y = 1, xend = (3^(1/2))/2, yend = -0.5, color = "black", lwd = 1) +
+  annotate("segment", x = -(3^(1/2))/2, y = -0.5, xend = (3^(1/2))/2, yend = -0.5, color = "black", lwd = 1) +
   geom_circle(aes(x0=0, y0=0, r=1), lwd=1, inherit.aes=FALSE) +
   annotate("segment", x = -1, y = 0, xend = 0, yend = 0, lwd = 1) +
-  annotate("text", x  = -0.2, y = 0.1, label = "r = 1", size = 6) +
-  annotate("text", x = 0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8, family = "CM Roman") +
-  annotate("text", x = -0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8, family = "CM Roman") +
-  annotate("text", x = 0, y = -0.65, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8, family = "CM Roman") +
+  annotate("text", x  = -0.2, y = 0.1, label = "r = 1", size = 6, family = "Cambria") +
+  annotate("text", x = 0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "black", size = 8, family = "Cambria") +
+  annotate("text", x = -0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "black", size = 8, family = "Cambria") +
+  annotate("text", x = 0, y = -0.65, label = TeX("$\\sqrt{3}$"), color = "black", size = 8, family = "Cambria") +
   theme_void() +
-  theme(text = element_text(family="CM Roman")) +
+  theme(text = element_text(family="Cambria")) +
   coord_fixed() 
 ```
 ```{r}
-ggplot(data = df, aes(x, y)) +
-  annotate("segment", x = 0, y = 1, xend = -(3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
-  annotate("segment", x = 0, y = 1, xend = (3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
-  annotate("segment", x = -(3^(1/2))/2, y = -0.5, xend = (3^(1/2))/2, yend = -0.5, color = "slateblue4", lwd = 1) +
-  geom_circle(aes(x0=0, y0=0, r=1), lwd=1, inherit.aes=FALSE) +
-  annotate("segment", x = -1, y = 0, xend = 0, yend = 0, lwd = 1) +
-  annotate("text", x  = -0.2, y = 0.1, label = "r = 1", size = 6) +
-  annotate("text", x = 0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8) +
-  annotate("text", x = -0.65, y = 0.2, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8) +
-  annotate("text", x = 0, y = -0.65, label = TeX("$\\sqrt{3}$"), color = "slateblue4", size = 8) +
+#| label: base-plot
+
+# create base plot
+p <- ggplot(data = df, aes(x, y)) +
+  geom_circle(aes(x0 = 0, y0 = 0, r = 1), lwd = 1, inherit.aes = FALSE, fill = "white", col = "black", alpha = 0.1) +
+  annotate("segment", x = 0, y = 1, xend = -(3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
+  annotate("segment", x = 0, y = 1, xend = (3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
+  annotate("segment", x = -(3^(1/2))/2, y = -0.5, xend = (3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
   theme_void() +
-  coord_fixed() 
+  coord_fixed()
 ```
 
+```{r}
+#| label: case-3-ggplot
+
+library(animation)
+
+# Function to generate a random (x, y) coordinate on a unit circle centered at 0
+random_xy <- function() {
+  # Generate a random angle between 0 and 2*pi
+  angle <- runif(1, 0, 2*pi)
+  
+  # Calculate the x and y coordinates using cos and sin functions
+  x_coordinate <- cos(angle)
+  y_coordinate <- sin(angle)
+  
+  return(c(x_coordinate, y_coordinate))
+}
+
+# Function to find length of line
+line_length = function(x1, y1, x2, y2) {
+  # use distance formula to calculate distance between points
+  distance <- sqrt((x2 - x1)^2 + (y2 - y1)^2)
+  return(distance)
+}
+
+# data for circle
+df <- data.frame(x=c(0, 1, -1, 0),
+                 y=c(1, 0, 0, -1))
+
+n = 10
+id = animate::new_id(1:n)
+
+saveGIF({
+  p <- ggplot(data = df, aes(x, y)) +
+  geom_circle(aes(x0 = 0, y0 = 0, r = 1), lwd = 1, inherit.aes = FALSE, fill = "white", col = "black", alpha = 0.1) +
+  annotate("segment", x = 0, y = 1, xend = -(3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
+  annotate("segment", x = 0, y = 1, xend = (3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
+  annotate("segment", x = -(3^(1/2))/2, y = -0.5, xend = (3^(1/2))/2, yend = -0.5, color = "gray35", lwd = 1) +
+  theme_void() +
+  coord_fixed()
+  for(i in 1:n) {
+    xy <- random_xy()
+    if(line_length((-(3^(1/2))/2), -0.5, xy[1], xy[2]) > 3^(1/2)) {
+      line_color = "firebrick1"
+      }
+    else {
+      line_color = "dodgerblue"
+      }
+    p + annotate("segment", x = -(3^(1/2))/2, xend = xy[1], y = -0.5, yend = xy[2],
+             color = line_color, lwd = 1)
+    ani.pause()
+    }
+  }, movie.name = "example-bertrand.gif", interval = 0.1, ani.width = 600)
+```
+
+```{r}
+#| label: case-3-base
+
+# Function to generate a random (x, y) coordinate on a unit circle centered at 0
+random_xy <- function() {
+  # Generate a random angle between 0 and 2*pi
+  angle <- runif(1, 0, 2*pi)
+  
+  # Calculate the x and y coordinates using cos and sin functions
+  x_coordinate <- cos(angle)
+  y_coordinate <- sin(angle)
+  
+  return(c(x_coordinate, y_coordinate))
+}
+
+# Function to find length of line
+line_length = function(x1, y1, x2, y2) {
+  # use distance formula to calculate distance between points
+  distance <- sqrt((x2 - x1)^2 + (y2 - y1)^2)
+  return(distance)
+}
+
+saveGIF({
+  # number of lines
+  n = 1000
+  
+  # matrix to store generated x and y values
+  xy = matrix(nrow = n, ncol = 3)
+  colnames(xy) = c("x", "y", "line_color")
+  
+  # generate 10 x and y values
+  for(j in 1:n) {
+    my_xy = random_xy()
+    xy[j,1] = my_xy[1]
+    xy[j,2] = my_xy[2]
+    # set color to red if line length > sqrt(3)
+    if(line_length((-(3^(1/2))/2), -0.5, my_xy[1], my_xy[2]) > 3^(1/2)) {
+      xy[j,3] = "firebrick1" }
+    # blue if not
+    else {
+      xy[j,3] = "dodgerblue" }
+    }
+  
+  for(i in 1:n) {
+    # square plot
+    par(pty="s")
+    # create empty plot
+    plot(1, type = "n", xlim = c(-1, 1), ylim = c(-1, 1), axes = FALSE, xlab = "", ylab = "", asp = 1)
+    # add circle at specific (x, y) coordinates with specific radius
+    draw.circle(x = 0, y = 0, radius = 1, lwd = 2)
+    # draw triangle
+    segments(x0 = 0, y0 = 1, x1 = -(3^(1/2))/2, y1 = -0.5, col = "gray35", lwd = 2)
+    segments(x0 = 0, y0 = 1, x1 = (3^(1/2))/2, y1 = -0.5, col = "gray35", lwd = 2)
+    segments(x0 = -(3^(1/2))/2, y0 = -0.5, x1 = (3^(1/2))/2, y1 = -0.5, col = "gray35", lwd = 2)
+    # add all lines up to i
+    for(k in 1:i) {
+      lines(x = c(-(3^(1/2))/2, xy[k,1]), y = c(-0.5, xy[k,2]), col = xy[k,3], lwd = 2)}}
+  },
+  movie.name = "bertrandss3.gif", interval = 0.05)
